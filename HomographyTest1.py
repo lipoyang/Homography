@@ -23,7 +23,6 @@ def calcH(x0,  y0,  x1,  y1,  x2,  y2,  x3,  y3,
                    [x3, y3, 1,  0,  0, 0, -x3*x3_, -y3*x3_],
                    [ 0,  0, 0, x3, y3, 1, -x3*y3_, -y3*y3_] ], dtype=np.float64)
     # h = A^-1 x'
-    #h = np.matmul(np.linalg.inv(A), x_)
     h = np.dot(np.linalg.inv(A), x_)
     # (x', y', 1) = H (x, y, 1)
     H = np.array([[h[0], h[1], h[2]],
@@ -70,10 +69,8 @@ def drawHomography(p_, dst_data):
             xf = math.floor(x)
             yf = math.floor(y)
             if 0 <= xf and xc < SrcW and 0 <= yf and yc < SrcH:
-                #r = src_data[yf, xf, 0]
-                #g = src_data[yf, xf, 1]
-                #b = src_data[yf, xf, 2]
-                dst_data[y_, x_] = interpolation(x,y) #(r, g, b)
+                # 線形補間で色を取得
+                dst_data[y_, x_] = interpolation(x,y)
 
 # 線形補間
 @jit(nopython=True, cache=True)
@@ -214,7 +211,7 @@ src_data = np.asarray(src_img)
 SrcW, SrcH = src_img.size # 画像のサイズ
 
 # 四隅の座標の初期値
-p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]])
+p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]], dtype=np.float64)
 p_prev = p_.copy()
 
 # ウィンドウ
