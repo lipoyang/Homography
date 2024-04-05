@@ -1,0 +1,236 @@
+from numba import jit # 要 pip install scipy
+import numpy as np
+import tkinter as tk
+from PIL import Image, ImageTk
+import os
+import math
+import time #デバッグ用
+
+# ホモグラフィ行列の計算
+# (xi,  yi ) : 写像元の点
+# (xi_, yi_) : 写像後の点
+@jit(nopython=True, cache=True)
+def calcH(x0,  y0,  x1,  y1,  x2,  y2,  x3,  y3,
+          x0_, y0_, x1_, y1_, x2_, y2_, x3_, y3_):
+    # x' = A h
+    x_ = np.array([x0_, y0_, x1_, y1_, x2_, y2_, x3_, y3_], dtype=np.float64).T
+    A  = np.array([[x0, y0, 1,  0,  0, 0, -x0*x0_, -y0*x0_],
+                   [ 0,  0, 0, x0, y0, 1, -x0*y0_, -y0*y0_],
+                   [x1, y1, 1,  0,  0, 0, -x1*x1_, -y1*x1_],
+                   [ 0,  0, 0, x1, y1, 1, -x1*y1_, -y1*y1_],
+                   [x2, y2, 1,  0,  0, 0, -x2*x2_, -y2*x2_],
+                   [ 0,  0, 0, x2, y2, 1, -x2*y2_, -y2*y2_],
+                   [x3, y3, 1,  0,  0, 0, -x3*x3_, -y3*x3_],
+                   [ 0,  0, 0, x3, y3, 1, -x3*y3_, -y3*y3_] ], dtype=np.float64)
+    # h = A^-1 x'
+    #h = np.matmul(np.linalg.inv(A), x_)
+    h = np.dot(np.linalg.inv(A), x_)
+    # (x', y', 1) = H (x, y, 1)
+    H = np.array([[h[0], h[1], h[2]],
+                  [h[3], h[4], h[5]],
+                  [h[6], h[7],   1 ]])
+    return H
+
+#  ホモグラフィ変換の画像描画
+@jit(nopython=True, cache=True)
+def drawHomography(p_, dst_data):
+
+    # ホモグラフィ行列
+#   H = calcH( 0, 0, SrcW-1, 0, SrcW-1, SrcH-1, 0, SrcH-1, 
+#           p_[0, 0], p_[0, 1], p_[1, 0], p_[1, 1], p_[2, 0], p_[2, 1], p_[3, 0], p_[3, 1])
+#   H_ =np.linalg.inv(H)
+
+    H_ = calcH(p_[0, 0], p_[0, 1], p_[1, 0], p_[1, 1], p_[2, 0], p_[2, 1], p_[3, 0], p_[3, 1],
+               0, 0, SrcW-1, 0, SrcW-1, SrcH-1, 0, SrcH-1)
+
+    """ 検算 (するときは @jitをはずす)
+    u = np.dot(H, np.array([    0.0,    0.0, 1.0]).T); print(f"(x', y') = ({u[0]/u[2]}, {u[1]/u[2]})")
+    u = np.dot(H, np.array([ SrcW-1,    0.0, 1.0]).T); print(f"(x', y') = ({u[0]/u[2]}, {u[1]/u[2]})")
+    u = np.dot(H, np.array([ SrcW-1, SrcH-1, 1.0]).T); print(f"(x', y') = ({u[0]/u[2]}, {u[1]/u[2]})")
+    u = np.dot(H, np.array([    0.0, SrcH-1, 1.0]).T); print(f"(x', y') = ({u[0]/u[2]}, {u[1]/u[2]})")
+    """
+    # 描画範囲
+    x1_ = min(p_[0, 0], p_[1, 0], p_[2, 0], p_[3, 0])
+    x2_ = max(p_[0, 0], p_[1, 0], p_[2, 0], p_[3, 0])
+    y1_ = min(p_[0, 1], p_[1, 1], p_[2, 1], p_[3, 1])
+    y2_ = max(p_[0, 1], p_[1, 1], p_[2, 1], p_[3, 1])
+
+    # 写像先の各々の点について
+    for y_ in range(y1_, y2_+1):
+        for x_ in range(x1_, x2_+1):
+            # (x, y) = (X/W, Y/W), (X, Y, W) = H^-1 (x', y', 1)
+            v_ = np.array([x_, y_, 1.0]).T
+            v = np.dot(H_, v_)
+            x = v[0] / v[2]
+            y = v[1] / v[2]
+
+            # 範囲の判定
+            xc = math.ceil(x-0.01)
+            yc = math.ceil(y-0.01)
+            xf = math.floor(x)
+            yf = math.floor(y)
+            if 0 <= xf and xc < SrcW and 0 <= yf and yc < SrcH:
+                #r = src_data[yf, xf, 0]
+                #g = src_data[yf, xf, 1]
+                #b = src_data[yf, xf, 2]
+                dst_data[y_, x_] = interpolation(x,y) #(r, g, b)
+
+# 線形補間
+@jit(nopython=True, cache=True)
+def interpolation(x, y):
+    R = np.zeros((2, 2), dtype=float)
+    G = np.zeros((2, 2), dtype=float)
+    B = np.zeros((2, 2), dtype=float)
+
+    X = int(x)
+    Y = int(y)
+    for i in range(2):
+        for j in range(2):
+            _x = X + i
+            if _x >= SrcW: _x = X
+            _y = Y + j
+            if _y >= SrcH: _y = Y
+            R[i, j] = src_data[_y, _x, 0]
+            G[i, j] = src_data[_y, _x, 1]
+            B[i, j] = src_data[_y, _x, 2]            
+    dX = x - X
+    dY = y - Y
+    MdX = 1 - dX
+    MdY = 1 - dY
+    r = round(MdX * (MdY * R[0, 0] + dY * R[0, 1]) + dX * (MdY * R[1, 0] + dY * R[1, 1]))
+    g = round(MdX * (MdY * G[0, 0] + dY * G[0, 1]) + dX * (MdY * G[1, 0] + dY * G[1, 1]))
+    b = round(MdX * (MdY * B[0, 0] + dY * B[0, 1]) + dX * (MdY * B[1, 0] + dY * B[1, 1]))
+    return r, g, b, 255
+
+# 描画
+def draw():
+    global img_tk
+
+    start_time = time.time()
+    
+    # ホモグラフィ画像の描画
+    dst_data = np.zeros((WinH, WinW, 4), dtype=np.uint8)
+    drawHomography(p_, dst_data)
+
+    dst_img = Image.fromarray(dst_data, 'RGBA')
+    img_tk = ImageTk.PhotoImage(dst_img)
+    canvas.delete("all")
+    canvas.create_image(0, 0, image = img_tk, anchor='nw') # 'nw':アンカー位置左上
+
+    # 枠線
+    if isFrameValid:
+        canvas.create_line(p_[0, 0], p_[0, 1], p_[1, 0], p_[1, 1], fill="red")
+        canvas.create_line(p_[1, 0], p_[1, 1], p_[2, 0], p_[2, 1], fill="red")
+        canvas.create_line(p_[2, 0], p_[2, 1], p_[3, 0], p_[3, 1], fill="red")
+        canvas.create_line(p_[3, 0], p_[3, 1], p_[0, 0], p_[0, 1], fill="red")
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"time: {elapsed_time} sec")
+
+# 凸四角形判定
+def isConvexQuad():
+    for i in range(4):
+        x1, y1 = p_[i]
+        x2, y2 = p_[(i + 1) % 4]
+        x3, y3 = p_[(i + 2) % 4]
+        cross_product = float((x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2))
+        if cross_product < 0:
+            return False
+    return True
+
+# 画面内判定
+def isInWindow(x, y):
+    ret = 0 <= x and x < WinW and 0 <= y and y < WinH
+    return ret 
+
+# マウスイベント関連
+R2 = 10*10  # 頂点の近傍閾値(半径ピクセル数の自乗)
+p_sel = -1  # 選択中の頂点 (0～3, -1は未選択状態)
+
+# マウス左ボタン押したとき
+def mouse_down(event):
+    global p_sel, p_
+    x, y = event.x, event.y
+    if x < 0 or x >= WinW or y < 0 or y >= WinH: return
+    for i in range(4):
+        X = p_[i, 0]; Y = p_[i, 1]
+        r2 = (X-x)*(X-x) + (Y-y)*(Y-y)
+        if r2 < R2:
+            p_sel = i
+            p_[i, 0] = x
+            p_[i, 1] = y
+            # 画面内で凸四角形か判定
+            if isInWindow(x, y) and isConvexQuad():
+                draw()
+            else:
+                p_ = p_prev.copy()
+                p_sel = -1
+            break
+
+# マウス左ボタン離したとき
+def mouse_up(event):
+    global p_sel, p_, p_prev
+    if p_sel >= 0:
+        x, y = event.x, event.y
+        p_[p_sel, 0] = x
+        p_[p_sel, 1] = y
+        # 画面内で凸四角形か判定
+        if isInWindow(x, y) and isConvexQuad():
+            p_prev = p_.copy()
+        else:
+            p_ = p_prev.copy()
+        draw()
+    p_sel = -1
+
+# マウスドラッグ時
+def mouse_move(event):
+    global p_sel, p_
+    button_state = event.state
+    if button_state & 0x100:  # 左ボタン状態
+        if p_sel >= 0:
+            x, y = event.x, event.y
+            p_[p_sel, 0] = x
+            p_[p_sel, 1] = y
+            # 画面内で凸四角形か判定
+            if not (isInWindow(x, y) and isConvexQuad()):
+                p_ = p_prev.copy()
+                p_sel = -1
+            draw()
+
+# キー入力判定
+isFrameValid = True
+def key_press(event):
+    global isFrameValid
+    if event.keysym == "f" or event.keysym == "F":
+        isFrameValid = not isFrameValid
+        draw()
+
+# 元画像を開く
+dir_path = os.path.dirname(__file__)
+image_path = os.path.join(dir_path, "lena_alt.bmp")
+src_img = Image.open(image_path)
+src_data = np.asarray(src_img)
+SrcW, SrcH = src_img.size # 画像のサイズ
+
+# 四隅の座標の初期値
+p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]])
+p_prev = p_.copy()
+
+# ウィンドウ
+WinW = 800; WinH = 600 # ウィンドウサイズ
+root = tk.Tk()
+root.title(u"ホモグラフィ変換")
+root.geometry(str(WinW) + "x" + str(WinH))
+root.bind("<Button-1>",        mouse_down)
+root.bind('<ButtonRelease-1>', mouse_up  )
+root.bind('<Motion>',          mouse_move)
+root.bind("<KeyPress>",        key_press)
+canvas = tk.Canvas(root, width = WinW, height = WinH)
+canvas.place(x=0, y=0)
+
+# 最初の描画
+draw()
+
+# メインループ
+root.mainloop()
