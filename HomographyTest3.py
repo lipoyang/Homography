@@ -40,7 +40,7 @@ def calcH(x0_, y0_, x1_, y1_, x2_, y2_, x3_, y3_):
 
 #  ホモグラフィ変換の画像描画
 @jit(nopython=True, cache=True)
-def drawHomography(p_, dst_data, fine):
+def drawHomography(p_, src_data, dst_data, fine):
 
     # ホモグラフィ行列
     H_ = calcH(p_[0, 0], p_[0, 1], p_[1, 0], p_[1, 1], p_[2, 0], p_[2, 1], p_[3, 0], p_[3, 1])
@@ -72,7 +72,7 @@ def drawHomography(p_, dst_data, fine):
             if 0 <= xf and xc < SrcW and 0 <= yf and yc < SrcH:
                 if fine:
                     # 線形補間で色を取得
-                    dst_data[y_, x_] = interpolation(x,y)
+                    dst_data[y_, x_] = interpolation(x, y, src_data)
                 else:
                     # 荒く高速描画
                     X = int(x)
@@ -93,6 +93,33 @@ def drawHomography(p_, dst_data, fine):
                     dst_data[y_, x_, 1] = g
                     dst_data[y_, x_, 2] = b
                     dst_data[y_, x_, 3] = a
+
+# 線形補間
+@jit(nopython=True, cache=True)
+def interpolation(x, y, src_data):
+    R = np.zeros((2, 2), dtype=float)
+    G = np.zeros((2, 2), dtype=float)
+    B = np.zeros((2, 2), dtype=float)
+
+    X = int(x)
+    Y = int(y)
+    for i in range(2):
+        for j in range(2):
+            _x = X + i
+            if _x >= SrcW: _x = X
+            _y = Y + j
+            if _y >= SrcH: _y = Y
+            R[i, j] = src_data[_y, _x, 0]
+            G[i, j] = src_data[_y, _x, 1]
+            B[i, j] = src_data[_y, _x, 2]            
+    dX = x - X
+    dY = y - Y
+    MdX = 1 - dX
+    MdY = 1 - dY
+    r = round(MdX * (MdY * R[0, 0] + dY * R[0, 1]) + dX * (MdY * R[1, 0] + dY * R[1, 1]))
+    g = round(MdX * (MdY * G[0, 0] + dY * G[0, 1]) + dX * (MdY * G[1, 0] + dY * G[1, 1]))
+    b = round(MdX * (MdY * B[0, 0] + dY * B[0, 1]) + dX * (MdY * B[1, 0] + dY * B[1, 1]))
+    return r, g, b, 255
 
 # 領域外で境界線近傍か判定
 @jit(nopython=True, cache=True)
@@ -122,20 +149,22 @@ def getBorderColor(dst_data, x_, y_):
 #境界線近傍の透過度
 @jit(nopython=True, cache=True)
 def getBorderAlpha(p_, x_, y_):
-    distance = 100.0
+    # 四角形からの距離dを求める (1未満)
+    d = 100.0
     p = np.array([x_, y_], dtype=np.float64)
     for i in range(4):
         a = p_[i]
         b = p_[(i+1)%4]
-        d = calc_distance(a, b, p)
-        if d < distance: distance = d
-    a = 1 - distance
+        d_ = calc_distance(a, b, p)
+        if d_ < d: d = d_
+    # 透過度は距離dに比例
+    a = 1 - d
     if a >= 1: a = 0.99
     if a <= 0: a = 0
     alpha = np.uint8(255.0 * a)
     return alpha
 
-# 線分abと点pの距離
+# 線分abと点pの距離d 
 @jit(nopython=True, cache=True)
 def calc_distance(a, b, p):
     ap = p - a
@@ -143,43 +172,14 @@ def calc_distance(a, b, p):
     ba = a - b
     bp = p - b
     if np.dot(ap, ab) < 0:
-        distance = norm(ap)
-        neighbor_point = a
+        d = norm(ap)
     elif np.dot(bp, ba) < 0:
-        distance = norm(p - b)
-        neighbor_point = b
+        d = norm(bp)
     else:
-        ai_norm = np.dot(ap, ab)/norm(ab)
-        neighbor_point = a + (ab)/norm(ab)*ai_norm
-        distance = norm(p - neighbor_point)
-    return distance
-
-# 線形補間
-@jit(nopython=True, cache=True)
-def interpolation(x, y):
-    R = np.zeros((2, 2), dtype=float)
-    G = np.zeros((2, 2), dtype=float)
-    B = np.zeros((2, 2), dtype=float)
-
-    X = int(x)
-    Y = int(y)
-    for i in range(2):
-        for j in range(2):
-            _x = X + i
-            if _x >= SrcW: _x = X
-            _y = Y + j
-            if _y >= SrcH: _y = Y
-            R[i, j] = src_data[_y, _x, 0]
-            G[i, j] = src_data[_y, _x, 1]
-            B[i, j] = src_data[_y, _x, 2]            
-    dX = x - X
-    dY = y - Y
-    MdX = 1 - dX
-    MdY = 1 - dY
-    r = round(MdX * (MdY * R[0, 0] + dY * R[0, 1]) + dX * (MdY * R[1, 0] + dY * R[1, 1]))
-    g = round(MdX * (MdY * G[0, 0] + dY * G[0, 1]) + dX * (MdY * G[1, 0] + dY * G[1, 1]))
-    b = round(MdX * (MdY * B[0, 0] + dY * B[0, 1]) + dX * (MdY * B[1, 0] + dY * B[1, 1]))
-    return r, g, b, 255
+        ac_norm = np.dot(ap, ab)/norm(ab)
+        c = a + (ab)/norm(ab)*ac_norm
+        d = norm(p - c)
+    return d
 
 # 描画
 def draw(fine):
@@ -189,7 +189,7 @@ def draw(fine):
     
     # ホモグラフィ画像の描画
     dst_data = np.zeros((WinH, WinW, 4), dtype=np.uint8)
-    drawHomography(p_, dst_data, fine)
+    drawHomography(p_, src_data, dst_data, fine)
 
     dst_img = Image.fromarray(dst_data, 'RGBA')
     img_tk = ImageTk.PhotoImage(dst_img)
@@ -278,7 +278,7 @@ def mouse_move(event):
             draw(False)
 
 # キー入力判定
-isFrameValid = False #True
+isFrameValid = False # 枠線表示有効/無効
 def key_press(event):
     global isFrameValid
     if event.keysym == "f" or event.keysym == "F":
@@ -293,7 +293,7 @@ src_data = np.asarray(src_img)
 SrcW, SrcH = src_img.size # 画像のサイズ
 
 # 四隅の座標の初期値
-p_ = np.array([[50, 50], [50+SrcW-1, 60], [40+SrcW-1, 50+SrcH-1], [60, 40+SrcH-1]], dtype=np.float64)
+p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]], dtype=np.float64)
 p_prev = p_.copy()
 
 # ウィンドウ
