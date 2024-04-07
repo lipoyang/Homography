@@ -1,5 +1,6 @@
 from numba import jit # 要 pip install scipy
 import numpy as np
+from numpy.linalg import norm
 import tkinter as tk
 from PIL import Image, ImageTk
 import os
@@ -80,6 +81,78 @@ def drawHomography(p_, dst_data, fine):
                     dst_data[y_, x_, 1] = src_data[Y, X, 1]
                     dst_data[y_, x_, 2] = src_data[Y, X, 2]
                     dst_data[y_, x_, 3] = 255
+
+    # 境界線を滑らかにする
+    if fine:
+        for y_ in range(y1_, y2_+1):
+            for x_ in range(x1_, x2_+1):
+                if isNearBorder(dst_data, x_, y_):
+                    r, g, b = getBorderColor(dst_data, x_, y_)
+                    a       = getBorderAlpha(p_, x_, y_)
+                    dst_data[y_, x_, 0] = r
+                    dst_data[y_, x_, 1] = g
+                    dst_data[y_, x_, 2] = b
+                    dst_data[y_, x_, 3] = a
+
+# 領域外で境界線近傍か判定
+@jit(nopython=True, cache=True)
+def isNearBorder(dst_data, x_, y_):
+    if dst_data[y_, x_, 3] == 255: return False
+    for dy in [-1, 0, 1]:
+        for dx in [-1, 0, 1]:
+            if dst_data[y_ + dy , x_ + dx , 3] == 255: return True
+    return False
+
+# 近傍の境界線上の色の平均値を取得
+@jit(nopython=True, cache=True)
+def getBorderColor(dst_data, x_, y_):
+    r = 0; g = 0; b = 0
+    cnt = 0
+    for dy in [-1, 0, 1]:
+        for dx in [-1, 0, 1]:
+            if dst_data[y_ + dy , x_ + dx , 3] == 255:
+                r += int(dst_data[y_ + dy , x_ + dx , 0])
+                g += int(dst_data[y_ + dy , x_ + dx , 1])
+                b += int(dst_data[y_ + dy , x_ + dx , 2])
+                cnt += 1
+    if cnt > 0:
+        r /= cnt; g /= cnt; b /= cnt
+    return np.uint8(r), np.uint8(g), np.uint8(b)
+
+#境界線近傍の透過度
+@jit(nopython=True, cache=True)
+def getBorderAlpha(p_, x_, y_):
+    distance = 100.0
+    p = np.array([x_, y_], dtype=np.float64)
+    for i in range(4):
+        a = p_[i]
+        b = p_[(i+1)%4]
+        d = calc_distance(a, b, p)
+        if d < distance: distance = d
+    a = 1 - distance
+    if a >= 1: a = 0.99
+    if a <= 0: a = 0
+    alpha = np.uint8(255.0 * a)
+    return alpha
+
+# 線分abと点pの距離
+@jit(nopython=True, cache=True)
+def calc_distance(a, b, p):
+    ap = p - a
+    ab = b - a
+    ba = a - b
+    bp = p - b
+    if np.dot(ap, ab) < 0:
+        distance = norm(ap)
+        neighbor_point = a
+    elif np.dot(bp, ba) < 0:
+        distance = norm(p - b)
+        neighbor_point = b
+    else:
+        ai_norm = np.dot(ap, ab)/norm(ab)
+        neighbor_point = a + (ab)/norm(ab)*ai_norm
+        distance = norm(p - neighbor_point)
+    return distance
 
 # 線形補間
 @jit(nopython=True, cache=True)
@@ -205,7 +278,7 @@ def mouse_move(event):
             draw(False)
 
 # キー入力判定
-isFrameValid = True
+isFrameValid = False #True
 def key_press(event):
     global isFrameValid
     if event.keysym == "f" or event.keysym == "F":
@@ -220,7 +293,7 @@ src_data = np.asarray(src_img)
 SrcW, SrcH = src_img.size # 画像のサイズ
 
 # 四隅の座標の初期値
-p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]], dtype=np.float64)
+p_ = np.array([[50, 50], [50+SrcW-1, 60], [40+SrcW-1, 50+SrcH-1], [60, 40+SrcH-1]], dtype=np.float64)
 p_prev = p_.copy()
 
 # ウィンドウ
