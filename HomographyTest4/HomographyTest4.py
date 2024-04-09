@@ -277,17 +277,17 @@ def mouse_move(event):
                 p_sel = -1
             draw(False)
 
-# キー入力判定
-isFrameValid = False # 枠線表示有効/無効
-def key_press(event):
+# 枠線表示有効/無効
+def setFrameValid(valid):
     global isFrameValid
-    if event.keysym == "f" or event.keysym == "F":
-        isFrameValid = not isFrameValid
-        draw(True)
+    isFrameValid = valid
+    draw(True)
 
 # 初期化
 def initialize(canvasMain):
-    global canvas, WinW, WinH, src_data, SrcW, SrcH, p_, p_prev
+    global canvas, WinW, WinH, src_data, SrcW, SrcH, p_, p_prev, isFrameValid
+    # 枠線表示有効/無効
+    isFrameValid = False
     # キャンバスを設定
     canvas = canvasMain
     WinW = 800; WinH = 600 # キャンバスのサイズ

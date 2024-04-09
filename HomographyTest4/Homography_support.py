@@ -17,7 +17,7 @@ _debug = True # False to eliminate debug printing from callback functions.
 
 def main(*args):
     '''Main entry point for the application.'''
-    global root
+    global root, _w1
     root = tk.Tk()
     root.protocol( 'WM_DELETE_WINDOW' , root.destroy)
     # Creates a toplevel widget.
@@ -29,7 +29,6 @@ def main(*args):
     _w1.canvasMain.bind("<Button-1>",        HomographyTest4.mouse_down)
     _w1.canvasMain.bind('<ButtonRelease-1>', HomographyTest4.mouse_up  )
     _w1.canvasMain.bind('<Motion>',          HomographyTest4.mouse_move)
-    _w1.canvasMain.bind("<KeyPress>",        HomographyTest4.key_press)
     HomographyTest4.initialize(_w1.canvasMain)
     HomographyTest4.draw(True) # 最初の描画
 
@@ -50,10 +49,11 @@ def buttonSave_onClick(*args):
         sys.stdout.flush()
 
 def checkBorder_onChange(*args):
+    global _w1
     if _debug:
-        print('Homography_support.checkBorder_onChange')
-        for arg in args:
-            print ('    another arg:', arg)
+        check = _w1.checkBorderVal.get()
+        HomographyTest4.setFrameValid(check)
+        print(f"check={check}")
         sys.stdout.flush()
 
 if __name__ == '__main__':

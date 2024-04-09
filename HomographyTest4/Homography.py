@@ -38,7 +38,7 @@ class mainWindow:
         top.configure(highlightcolor="#000000")
 
         self.top = top
-        self.che50 = tk.IntVar()
+        self.checkBorderVal = tk.BooleanVar()
 
         self.canvasMain = tk.Canvas(self.top)
         self.canvasMain.place(relx=0.012, rely=0.062, relheight=0.923
@@ -93,7 +93,7 @@ class mainWindow:
         self.checkBorder.configure(highlightcolor="#000000")
         self.checkBorder.configure(justify='left')
         self.checkBorder.configure(text='''Border''')
-        self.checkBorder.configure(variable=self.che50)
+        self.checkBorder.configure(variable=self.checkBorderVal)
 
 def start_up():
     Homography_support.main()
