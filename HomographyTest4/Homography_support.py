@@ -30,7 +30,6 @@ def main(*args):
     _w1.canvasMain.bind('<ButtonRelease-1>', HomographyTest4.mouse_up  )
     _w1.canvasMain.bind('<Motion>',          HomographyTest4.mouse_move)
     HomographyTest4.initialize(_w1.canvasMain)
-    # HomographyTest4.draw(True) # 最初の描画
 
     root.mainloop()
 
@@ -39,24 +38,23 @@ def buttonLoad_onClick(*args):
     iDir = os.path.abspath(os.path.dirname(__file__))
     file_name = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
     if file_name != "":
-        print(f"file_name={file_name}")
+        # print(f"file_name={file_name}")
         HomographyTest4.loadImage(file_name)
-    #for arg in args:
-    #    print ('    another arg:', arg)
-    #sys.stdout.flush()
 
 def buttonSave_onClick(*args):
-    print('Homography_support.buttonSave_onClick')
-    for arg in args:
-        print ('    another arg:', arg)
-    sys.stdout.flush()
+    if not HomographyTest4.hasImageLoaded: return
+    fTyp = [("ビットマップファイル", "*.png")]
+    iDir = os.path.abspath(os.path.dirname(__file__))
+    file_name = tkinter.filedialog.asksaveasfilename(filetypes=fTyp, initialdir=iDir, defaultextension = "png")
+    if file_name != "":
+        print(f"file_name={file_name}")
+        HomographyTest4.saveImage(file_name)
 
 def checkBorder_onChange(*args):
     global _w1
     check = _w1.checkBorderVal.get()
-    HomographyTest4.setFrameValid(check)
     # print(f"check={check}")
-    sys.stdout.flush()
+    HomographyTest4.setFrameValid(check)
 
 if __name__ == '__main__':
     Homography.start_up()

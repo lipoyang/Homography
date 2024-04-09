@@ -186,7 +186,7 @@ def calc_distance(a, b, p):
 
 # 描画
 def draw(fine):
-    global img_tk
+    global img_tk, dst_data
 
     start_time = time.time()
     
@@ -313,3 +313,29 @@ def loadImage(image_path):
 
     hasImageLoaded = True
     draw(True)
+
+# 画像保存
+def saveImage(image_path):
+    global dst_data, p_
+    if not hasImageLoaded: return
+    clip_data = clipImage(dst_data, p_)
+    clip_img = Image.fromarray(clip_data, 'RGBA')
+    clip_img.save(image_path)
+
+# 画像の切り出し
+@jit(nopython=True, cache=True)
+def clipImage(dst_data, p_):
+    # 描画範囲
+    x1_ = int(min(p_[0, 0], p_[1, 0], p_[2, 0], p_[3, 0]))
+    x2_ = int(max(p_[0, 0], p_[1, 0], p_[2, 0], p_[3, 0]))
+    y1_ = int(min(p_[0, 1], p_[1, 1], p_[2, 1], p_[3, 1]))
+    y2_ = int(max(p_[0, 1], p_[1, 1], p_[2, 1], p_[3, 1]))
+    w = x2_ - x1_ + 1
+    h = y2_ - y1_ + 1
+    clip_data = np.zeros((h, w, 4), dtype=np.uint8)
+
+    # 写像先の各々の点について
+    for y in range(h):
+        for x in range(w):
+            clip_data[y, x] = dst_data[y1_ + y, x1_ + x]
+    return clip_data
