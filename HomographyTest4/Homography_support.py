@@ -10,7 +10,9 @@ import os
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.filedialog
+import tkinter.messagebox
 from tkinter.constants import *
+import threading
 
 import Homography
 import HomographyTest4
@@ -34,12 +36,26 @@ def main(*args):
     root.mainloop()
 
 def buttonLoad_onClick(*args):
+    global file_name, sub_window
     fTyp = [("ビットマップファイル", "*.bmp")]
     iDir = os.path.abspath(os.path.dirname(__file__))
     file_name = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
     if file_name != "":
         # print(f"file_name={file_name}")
-        HomographyTest4.loadImage(file_name)
+        sub_window = tkinter.Toplevel(root)
+        sub_window.title(" ")
+        label = tkinter.Label(sub_window, text = "画像読み込み中")
+        label.pack()
+        progress_bar = ttk.Progressbar(sub_window, orient="horizontal", length=200, mode="indeterminate")
+        progress_bar.pack()
+        progress_bar.start(5)
+        thread1 = threading.Thread(target=loadImage)
+        thread1.start()
+
+def loadImage():
+    global file_name, sub_window
+    HomographyTest4.loadImage(file_name)
+    sub_window.destroy()
 
 def buttonSave_onClick(*args):
     if not HomographyTest4.hasImageLoaded: return

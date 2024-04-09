@@ -311,8 +311,8 @@ def loadImage(image_path):
     p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]], dtype=np.float64)
     p_prev = p_.copy()
 
-    hasImageLoaded = True
     draw(True)
+    hasImageLoaded = True
 
 # 画像保存
 def saveImage(image_path):
