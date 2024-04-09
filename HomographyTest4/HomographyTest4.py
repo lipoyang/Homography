@@ -295,14 +295,15 @@ def initialize(canvasMain):
     global canvas, WinW, WinH
     # キャンバスを設定
     canvas = canvasMain
-    WinW = 800; WinH = 600 # キャンバスのサイズ
+    # キャンバスのサイズ
+    WinW = canvas.winfo_width()
+    WinH = canvas.winfo_height()
+    # print(f"canvas: {WinW} {WinH}")
 
 # 画像読み込み
 def loadImage(image_path):
     global src_data, SrcW, SrcH, p_, p_prev, hasImageLoaded
     # 元画像を開く
-    # dir_path = os.path.dirname(__file__)
-    # image_path = os.path.join(dir_path, "lena_alt.bmp")
     src_img = Image.open(image_path)
     src_data = np.asarray(src_img)
     SrcW, SrcH = src_img.size # 画像のサイズ

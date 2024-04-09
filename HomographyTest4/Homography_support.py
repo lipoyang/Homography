@@ -31,9 +31,13 @@ def main(*args):
     _w1.canvasMain.bind("<Button-1>",        HomographyTest4.mouse_down)
     _w1.canvasMain.bind('<ButtonRelease-1>', HomographyTest4.mouse_up  )
     _w1.canvasMain.bind('<Motion>',          HomographyTest4.mouse_move)
-    HomographyTest4.initialize(_w1.canvasMain)
+    _w1.canvasMain.bind("<Map>", canvas_onMap)
 
     root.mainloop()
+
+def canvas_onMap(event):
+    global _w1
+    HomographyTest4.initialize(_w1.canvasMain)
 
 def buttonLoad_onClick(*args):
     global file_name, sub_window
