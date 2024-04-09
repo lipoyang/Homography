@@ -285,8 +285,12 @@ def key_press(event):
         isFrameValid = not isFrameValid
         draw(True)
 
-def initialize():
-    global src_data, SrcW, SrcH, p_, p_prev
+# 初期化
+def initialize(canvasMain):
+    global canvas, WinW, WinH, src_data, SrcW, SrcH, p_, p_prev
+    # キャンバスを設定
+    canvas = canvasMain
+    WinW = 800; WinH = 600 # キャンバスのサイズ
     # 元画像を開く
     dir_path = os.path.dirname(__file__)
     image_path = os.path.join(dir_path, "lena_alt.bmp")
@@ -297,24 +301,3 @@ def initialize():
     # 四隅の座標の初期値
     p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]], dtype=np.float64)
     p_prev = p_.copy()
-
-# ウィンドウ
-WinW = 800; WinH = 600 # ウィンドウサイズ
-root = tk.Tk()
-root.title(u"ホモグラフィ変換")
-root.geometry(str(WinW) + "x" + str(WinH))
-root.bind("<Button-1>",        mouse_down)
-root.bind('<ButtonRelease-1>', mouse_up  )
-root.bind('<Motion>',          mouse_move)
-root.bind("<KeyPress>",        key_press)
-canvas = tk.Canvas(root, width = WinW, height = WinH)
-canvas.place(x=0, y=0)
-
-# 初期化
-initialize()
-
-# 最初の描画
-draw(True)
-
-# メインループ
-root.mainloop()

@@ -11,6 +11,7 @@ import tkinter.ttk as ttk
 from tkinter.constants import *
 
 import Homography
+import HomographyTest4
 
 _debug = True # False to eliminate debug printing from callback functions.
 
@@ -23,6 +24,15 @@ def main(*args):
     global _top1, _w1
     _top1 = root
     _w1 = Homography.mainWindow(_top1)
+
+    # 初期化コード追加
+    _w1.canvasMain.bind("<Button-1>",        HomographyTest4.mouse_down)
+    _w1.canvasMain.bind('<ButtonRelease-1>', HomographyTest4.mouse_up  )
+    _w1.canvasMain.bind('<Motion>',          HomographyTest4.mouse_move)
+    _w1.canvasMain.bind("<KeyPress>",        HomographyTest4.key_press)
+    HomographyTest4.initialize(_w1.canvasMain)
+    HomographyTest4.draw(True) # 最初の描画
+
     root.mainloop()
 
 def buttonLoad_onClick(*args):
