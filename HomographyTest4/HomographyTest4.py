@@ -7,6 +7,9 @@ import os
 import math
 import time #デバッグ用
 
+isFrameValid = False    # 枠線表示有効/無効
+hasImageLoaded = False  # 画像ファイル読み込みずみ
+
 # ホモグラフィ行列の計算
 # (xi_, yi_) : 写像後の点
 @jit(nopython=True, cache=True)
@@ -230,6 +233,7 @@ p_sel = -1  # 選択中の頂点 (0～3, -1は未選択状態)
 # マウス左ボタン押したとき
 def mouse_down(event):
     global p_sel, p_
+    if not hasImageLoaded: return
     x, y = event.x, event.y
     if x < 0 or x >= WinW or y < 0 or y >= WinH: return
     for i in range(4):
@@ -250,6 +254,7 @@ def mouse_down(event):
 # マウス左ボタン離したとき
 def mouse_up(event):
     global p_sel, p_, p_prev
+    if not hasImageLoaded: return
     if p_sel >= 0:
         x, y = event.x, event.y
         p_[p_sel, 0] = x
@@ -265,6 +270,7 @@ def mouse_up(event):
 # マウスドラッグ時
 def mouse_move(event):
     global p_sel, p_
+    if not hasImageLoaded: return
     button_state = event.state
     if button_state & 0x100:  # 左ボタン状態
         if p_sel >= 0:
@@ -280,20 +286,23 @@ def mouse_move(event):
 # 枠線表示有効/無効
 def setFrameValid(valid):
     global isFrameValid
+    if not hasImageLoaded: return
     isFrameValid = valid
     draw(True)
 
 # 初期化
 def initialize(canvasMain):
-    global canvas, WinW, WinH, src_data, SrcW, SrcH, p_, p_prev, isFrameValid
-    # 枠線表示有効/無効
-    isFrameValid = False
+    global canvas, WinW, WinH
     # キャンバスを設定
     canvas = canvasMain
     WinW = 800; WinH = 600 # キャンバスのサイズ
+
+# 画像読み込み
+def loadImage(image_path):
+    global src_data, SrcW, SrcH, p_, p_prev, hasImageLoaded
     # 元画像を開く
-    dir_path = os.path.dirname(__file__)
-    image_path = os.path.join(dir_path, "lena_alt.bmp")
+    # dir_path = os.path.dirname(__file__)
+    # image_path = os.path.join(dir_path, "lena_alt.bmp")
     src_img = Image.open(image_path)
     src_data = np.asarray(src_img)
     SrcW, SrcH = src_img.size # 画像のサイズ
@@ -301,3 +310,6 @@ def initialize(canvasMain):
     # 四隅の座標の初期値
     p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]], dtype=np.float64)
     p_prev = p_.copy()
+
+    hasImageLoaded = True
+    draw(True)

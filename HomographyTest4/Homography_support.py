@@ -6,14 +6,14 @@
 #    Apr 09, 2024 12:59:20 PM JST  platform: Windows NT
 
 import sys
+import os
 import tkinter as tk
 import tkinter.ttk as ttk
+import tkinter.filedialog
 from tkinter.constants import *
 
 import Homography
 import HomographyTest4
-
-_debug = True # False to eliminate debug printing from callback functions.
 
 def main(*args):
     '''Main entry point for the application.'''
@@ -30,31 +30,33 @@ def main(*args):
     _w1.canvasMain.bind('<ButtonRelease-1>', HomographyTest4.mouse_up  )
     _w1.canvasMain.bind('<Motion>',          HomographyTest4.mouse_move)
     HomographyTest4.initialize(_w1.canvasMain)
-    HomographyTest4.draw(True) # 最初の描画
+    # HomographyTest4.draw(True) # 最初の描画
 
     root.mainloop()
 
 def buttonLoad_onClick(*args):
-    if _debug:
-        print('Homography_support.buttonLoad_onClick')
-        for arg in args:
-            print ('    another arg:', arg)
-        sys.stdout.flush()
+    fTyp = [("ビットマップファイル", "*.bmp")]
+    iDir = os.path.abspath(os.path.dirname(__file__))
+    file_name = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
+    if file_name != "":
+        print(f"file_name={file_name}")
+        HomographyTest4.loadImage(file_name)
+    #for arg in args:
+    #    print ('    another arg:', arg)
+    #sys.stdout.flush()
 
 def buttonSave_onClick(*args):
-    if _debug:
-        print('Homography_support.buttonSave_onClick')
-        for arg in args:
-            print ('    another arg:', arg)
-        sys.stdout.flush()
+    print('Homography_support.buttonSave_onClick')
+    for arg in args:
+        print ('    another arg:', arg)
+    sys.stdout.flush()
 
 def checkBorder_onChange(*args):
     global _w1
-    if _debug:
-        check = _w1.checkBorderVal.get()
-        HomographyTest4.setFrameValid(check)
-        print(f"check={check}")
-        sys.stdout.flush()
+    check = _w1.checkBorderVal.get()
+    HomographyTest4.setFrameValid(check)
+    # print(f"check={check}")
+    sys.stdout.flush()
 
 if __name__ == '__main__':
     Homography.start_up()
