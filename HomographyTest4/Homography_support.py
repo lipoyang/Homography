@@ -17,6 +17,10 @@ import threading
 import Homography
 import HomographyTest4
 
+# 初期化ずみフラグ
+hasInitialized = False
+
+# メイン関数
 def main(*args):
     '''Main entry point for the application.'''
     global root, _w1
@@ -31,14 +35,19 @@ def main(*args):
     _w1.canvasMain.bind("<Button-1>",        HomographyTest4.mouse_down)
     _w1.canvasMain.bind('<ButtonRelease-1>', HomographyTest4.mouse_up  )
     _w1.canvasMain.bind('<Motion>',          HomographyTest4.mouse_move)
-    _w1.canvasMain.bind("<Map>", canvas_onMap)
+    _w1.canvasMain.bind("<Map>", canvas_onMap) # キャンバスが描画されたとき
 
     root.mainloop()
 
+# キャンバスが描画されたとき(サイズが確定したとき)
 def canvas_onMap(event):
-    global _w1
+    # 初期化ずみでなれば初期化処理
+    global _w1, hasInitialized
+    if hasInitialized: return
     HomographyTest4.initialize(_w1.canvasMain)
+    hasInitialized = True
 
+# Loadボタンクリック時
 def buttonLoad_onClick(*args):
     global file_name, sub_window
     fTyp = [("ビットマップファイル", "*.bmp")]
@@ -46,21 +55,28 @@ def buttonLoad_onClick(*args):
     file_name = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
     if file_name != "":
         # print(f"file_name={file_name}")
+        x = root.winfo_x() + 100
+        y = root.winfo_y() + 100
         sub_window = tkinter.Toplevel(root)
+        sub_window.geometry(f"200x80+{x}+{y}")
+        sub_window.resizable(0,  0)
         sub_window.title(" ")
+        sub_window.attributes("-topmost", True)
         label = tkinter.Label(sub_window, text = "画像読み込み中")
-        label.pack()
+        label.pack(pady=(10,0), padx=10)
         progress_bar = ttk.Progressbar(sub_window, orient="horizontal", length=200, mode="indeterminate")
-        progress_bar.pack()
+        progress_bar.pack(pady=10, padx=10)
         progress_bar.start(5)
         thread1 = threading.Thread(target=loadImage)
         thread1.start()
 
+# 画像読み込み/描画処理 (重いので別スレッド)
 def loadImage():
     global file_name, sub_window
     HomographyTest4.loadImage(file_name)
     sub_window.destroy()
 
+# Saveボタンクリック時
 def buttonSave_onClick(*args):
     if not HomographyTest4.hasImageLoaded: return
     fTyp = [("ビットマップファイル", "*.png")]
@@ -70,6 +86,7 @@ def buttonSave_onClick(*args):
         print(f"file_name={file_name}")
         HomographyTest4.saveImage(file_name)
 
+# Borderチェックボックス変更時
 def checkBorder_onChange(*args):
     global _w1
     check = _w1.checkBorderVal.get()

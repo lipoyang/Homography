@@ -28,10 +28,10 @@ class mainWindow:
         '''This class configures and populates the toplevel window.
            top is the toplevel containing window.'''
 
-        top.geometry("820x650+303+201")
+        top.geometry("820x650+10+10")
         top.minsize(120, 1)
         top.maxsize(1924, 1781)
-        top.resizable(1,  1)
+        top.resizable(0,  0)
         top.title("ホモグラフィ変換")
         top.configure(background="#d9d9d9")
         top.configure(highlightbackground="#d9d9d9")
