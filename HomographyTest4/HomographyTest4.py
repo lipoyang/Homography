@@ -44,7 +44,7 @@ def calcH(x0_, y0_, x1_, y1_, x2_, y2_, x3_, y3_):
 
 #  ホモグラフィ変換の画像描画
 @jit(nopython=True, cache=True)
-def drawHomography(p_, SrcW, SrcH, src_data, dst_data, fine):
+def drawHomography(p_, SrcW, SrcH, src_data, DstW, DstH, dst_data, fine):
 
     # ホモグラフィ行列
     H_ = calcH(p_[0, 0], p_[0, 1], p_[1, 0], p_[1, 1], p_[2, 0], p_[2, 1], p_[3, 0], p_[3, 1])
@@ -90,8 +90,8 @@ def drawHomography(p_, SrcW, SrcH, src_data, dst_data, fine):
     if fine:
         for y_ in range(y1_, y2_+1):
             for x_ in range(x1_, x2_+1):
-                if isNearBorder(dst_data, x_, y_):
-                    r, g, b = getBorderColor(dst_data, x_, y_)
+                if isNearBorder(DstW, DstH, dst_data, x_, y_):
+                    r, g, b = getBorderColor(DstW, DstH, dst_data, x_, y_)
                     a       = getBorderAlpha(p_, x_, y_)
                     dst_data[y_, x_, 0] = r
                     dst_data[y_, x_, 1] = g
@@ -127,24 +127,33 @@ def interpolation(x, y, SrcW, SrcH, src_data):
 
 # 領域外で境界線近傍か判定
 @jit(nopython=True, cache=True)
-def isNearBorder(dst_data, x_, y_):
+def isNearBorder(DstW, DstH, dst_data, x_, y_):
     if dst_data[y_, x_, 3] == 255: return False
-    for dy in [-1, 0, 1]:
-        for dx in [-1, 0, 1]:
-            if dst_data[y_ + dy , x_ + dx , 3] == 255: return True
+    y1 = y_ - 1 if y_ > 0 else y_
+    x1 = x_ - 1 if x_ > 0 else x_
+    y2 = y_ + 1 if y_ < DstH - 1 else y_
+    x2 = x_ + 1 if x_ < DstW - 1 else x_
+
+    for y in range(y1, y2-1):
+        for x in range(x1, x2-1):
+            if dst_data[y, x, 3] == 255: return True
     return False
 
 # 近傍の境界線上の色の平均値を取得
 @jit(nopython=True, cache=True)
-def getBorderColor(dst_data, x_, y_):
+def getBorderColor(DstW, DstH, dst_data, x_, y_):
     r = 0; g = 0; b = 0
     cnt = 0
-    for dy in [-1, 0, 1]:
-        for dx in [-1, 0, 1]:
-            if dst_data[y_ + dy , x_ + dx , 3] == 255:
-                r += int(dst_data[y_ + dy , x_ + dx , 0])
-                g += int(dst_data[y_ + dy , x_ + dx , 1])
-                b += int(dst_data[y_ + dy , x_ + dx , 2])
+    y1 = y_ - 1 if y_ > 0 else y_
+    x1 = x_ - 1 if x_ > 0 else x_
+    y2 = y_ + 1 if y_ < DstH - 1 else y_
+    x2 = x_ + 1 if x_ < DstW - 1 else x_
+    for y in range(y1, y2-1):
+        for x in range(x1, x2-1):
+            if dst_data[y, x, 3] == 255:
+                r += int(dst_data[y, x, 0])
+                g += int(dst_data[y, x, 1])
+                b += int(dst_data[y, x, 2])
                 cnt += 1
     if cnt > 0:
         r /= cnt; g /= cnt; b /= cnt
@@ -192,8 +201,8 @@ def draw(fine):
     start_time = time.time()
     
     # ホモグラフィ画像の描画
-    dst_data = np.zeros((WinH, WinW, 4), dtype=np.uint8)
-    drawHomography(p_, SrcW, SrcH, src_data, dst_data, fine)
+    dst_data = np.zeros((DstH, DstW, 4), dtype=np.uint8)
+    drawHomography(p_, SrcW, SrcH, src_data, DstW, DstH, dst_data, fine)
 
     dst_img = Image.fromarray(dst_data, 'RGBA')
     img_tk = ImageTk.PhotoImage(dst_img)
@@ -224,7 +233,7 @@ def isConvexQuad():
 
 # 画面内判定
 def isInWindow(x, y):
-    ret = 0 <= x and x < WinW and 0 <= y and y < WinH
+    ret = 0 <= x and x < DstW and 0 <= y and y < DstH
     return ret 
 
 # マウスイベント関連
@@ -236,7 +245,7 @@ def mouse_down(event):
     global p_sel, p_
     if not hasImageLoaded: return
     x, y = event.x, event.y
-    if x < 0 or x >= WinW or y < 0 or y >= WinH: return
+    if x < 0 or x >= DstW or y < 0 or y >= DstH: return
     for i in range(4):
         X = p_[i, 0]; Y = p_[i, 1]
         r2 = (X-x)*(X-x) + (Y-y)*(Y-y)
@@ -293,13 +302,13 @@ def setFrameValid(valid):
 
 # 初期化
 def initialize(canvasMain):
-    global canvas, WinW, WinH
+    global canvas, DstW, DstH
     # キャンバスを設定
     canvas = canvasMain
     # キャンバスのサイズ
-    WinW = canvas.winfo_width()
-    WinH = canvas.winfo_height()
-    # print(f"canvas: {WinW} {WinH}")
+    DstW = canvas.winfo_width()
+    DstH = canvas.winfo_height()
+    # print(f"canvas: {DstW} {DstH}")
 
 # 画像読み込み
 def loadImage(image_path):
@@ -310,7 +319,7 @@ def loadImage(image_path):
         _SrcW, _SrcH = src_img.size # 画像のサイズ
 
         # 画像サイズチェック
-        if _SrcW > WinW or _SrcH > WinH:
+        if _SrcW > DstW or _SrcH > DstH:
             tk.messagebox.showerror("エラー", "画像が大きすぎます (800x600まで)")
             return
 
@@ -339,8 +348,8 @@ def loadImage(image_path):
         
         SrcW = _SrcW
         SrcH = _SrcH
-        x0 = int((WinW - SrcW) / 2)
-        y0 = int((WinH - SrcH) / 2)
+        x0 = int((DstW - SrcW) / 2)
+        y0 = int((DstH - SrcH) / 2)
 
         # 四隅の座標の初期値
         p_ = np.array([[x0, y0], [x0+SrcW-1, y0], [x0+SrcW-1, y0+SrcH-1], [x0, y0+SrcH-1]], dtype=np.float64)
