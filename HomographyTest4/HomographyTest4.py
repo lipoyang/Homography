@@ -318,6 +318,7 @@ def loadImage(image_path):
 
         # 画像のピクセルデータ取得
         src_data = np.asarray(src_img)
+        print(f"{src_data.shape}")
 
         # 四隅の座標の初期値
         p_ = np.array([[x0, y0], [x0+SrcW-1, y0], [x0+SrcW-1, y0+SrcH-1], [x0, y0+SrcH-1]], dtype=np.float64)
@@ -334,7 +335,10 @@ def saveImage(image_path):
     if not hasImageLoaded: return
     clip_data = clipImage(dst_data, p_)
     clip_img = Image.fromarray(clip_data, 'RGBA')
-    clip_img.save(image_path)
+    try:
+        clip_img.save(image_path)
+    except:
+        tk.messagebox.showerror("エラー", "画像の保存に失敗しました")
 
 # 画像の切り出し
 @jit(nopython=True, cache=True)

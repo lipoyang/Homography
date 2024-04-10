@@ -50,7 +50,7 @@ def canvas_onMap(event):
 # Loadボタンクリック時
 def buttonLoad_onClick(*args):
     global file_name, sub_window
-    fTyp = [("ビットマップファイル", "*.bmp")]
+    fTyp = [("画像ファイル", "*.bmp;*.png;*.jpg")]
     iDir = os.path.abspath(os.path.dirname(__file__))
     file_name = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
     if file_name != "":
@@ -79,11 +79,16 @@ def loadImage():
 # Saveボタンクリック時
 def buttonSave_onClick(*args):
     if not HomographyTest4.hasImageLoaded: return
-    fTyp = [("ビットマップファイル", "*.png")]
+    fTyp = [("PNGファイル", "*.png")]
     iDir = os.path.abspath(os.path.dirname(__file__))
     file_name = tkinter.filedialog.asksaveasfilename(filetypes=fTyp, initialdir=iDir, defaultextension = "png")
     if file_name != "":
-        print(f"file_name={file_name}")
+        _, ext = os.path.splitext(file_name)
+        ext = ext.lower()
+        if ext != ".png":
+            tk.messagebox.showerror("エラー", "拡張子が不正です")
+            return
+        # print(f"file_name={file_name}")
         HomographyTest4.saveImage(file_name)
 
 # Borderチェックボックス変更時
