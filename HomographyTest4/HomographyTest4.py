@@ -279,7 +279,7 @@ def mouse_up(event):
 
 # マウスドラッグ時
 def mouse_move(event):
-    global p_sel, p_
+    global p_sel, p_, p_prev
     if not hasImageLoaded: return
     button_state = event.state
     if button_state & 0x100:  # 左ボタン状態
@@ -288,9 +288,10 @@ def mouse_move(event):
             p_[p_sel, 0] = x
             p_[p_sel, 1] = y
             # 画面内で凸四角形か判定
-            if not (isInWindow(x, y) and isConvexQuad()):
+            if isInWindow(x, y) and isConvexQuad():
+                p_prev = p_.copy()
+            else:
                 p_ = p_prev.copy()
-                p_sel = -1
             draw(False)
 
 # 枠線表示有効/無効
