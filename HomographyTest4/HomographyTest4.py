@@ -134,8 +134,8 @@ def isNearBorder(DstW, DstH, dst_data, x_, y_):
     y2 = y_ + 1 if y_ < DstH - 1 else y_
     x2 = x_ + 1 if x_ < DstW - 1 else x_
 
-    for y in range(y1, y2-1):
-        for x in range(x1, x2-1):
+    for y in range(y1, y2+1):
+        for x in range(x1, x2+1):
             if dst_data[y, x, 3] == 255: return True
     return False
 
@@ -148,8 +148,8 @@ def getBorderColor(DstW, DstH, dst_data, x_, y_):
     x1 = x_ - 1 if x_ > 0 else x_
     y2 = y_ + 1 if y_ < DstH - 1 else y_
     x2 = x_ + 1 if x_ < DstW - 1 else x_
-    for y in range(y1, y2-1):
-        for x in range(x1, x2-1):
+    for y in range(y1, y2+1):
+        for x in range(x1, x2+1):
             if dst_data[y, x, 3] == 255:
                 r += int(dst_data[y, x, 0])
                 g += int(dst_data[y, x, 1])
