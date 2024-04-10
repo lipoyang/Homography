@@ -2,6 +2,7 @@ from numba import jit # 要 pip install scipy
 import numpy as np
 from numpy.linalg import norm
 import tkinter as tk
+import PIL
 from PIL import Image, ImageTk
 import os
 import math
@@ -303,17 +304,29 @@ def initialize(canvasMain):
 # 画像読み込み
 def loadImage(image_path):
     global src_data, SrcW, SrcH, p_, p_prev, hasImageLoaded
-    # 元画像を開く
-    src_img = Image.open(image_path)
-    src_data = np.asarray(src_img)
-    SrcW, SrcH = src_img.size # 画像のサイズ
+    try:
+        # 元画像を開く
+        src_img = Image.open(image_path)
+        SrcW, SrcH = src_img.size # 画像のサイズ
 
-    # 四隅の座標の初期値
-    p_ = np.array([[50, 50], [50+SrcW-1, 50], [50+SrcW-1, 50+SrcH-1], [50, 50+SrcH-1]], dtype=np.float64)
-    p_prev = p_.copy()
+        # 画像サイズチェック
+        if SrcW > WinW or SrcH > WinH:
+            tk.messagebox.showerror("エラー", "画像が大きすぎます (800x600まで)")
+            return
+        x0 = int((WinW - SrcW) / 2)
+        y0 = int((WinH - SrcH) / 2)
 
-    draw(True)
-    hasImageLoaded = True
+        # 画像のピクセルデータ取得
+        src_data = np.asarray(src_img)
+
+        # 四隅の座標の初期値
+        p_ = np.array([[x0, y0], [x0+SrcW-1, y0], [x0+SrcW-1, y0+SrcH-1], [x0, y0+SrcH-1]], dtype=np.float64)
+        p_prev = p_.copy()
+
+        draw(True)
+        hasImageLoaded = True
+    except PIL.UnidentifiedImageError:
+        tk.messagebox.showerror("エラー", "画像が不正です")
 
 # 画像保存
 def saveImage(image_path):
