@@ -54,6 +54,11 @@ def buttonLoad_onClick(*args):
     iDir = os.path.abspath(os.path.dirname(__file__))
     file_name = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
     if file_name != "":
+        _, ext = os.path.splitext(file_name)
+        ext = ext.lower()
+        if ext != ".bmp" and ext != ".png" and ext != ".jpg":
+            tk.messagebox.showerror("エラー", "拡張子が不正です")
+            return
         # print(f"file_name={file_name}")
         x = root.winfo_x() + 100
         y = root.winfo_y() + 100
@@ -100,7 +105,3 @@ def checkBorder_onChange(*args):
 
 if __name__ == '__main__':
     Homography.start_up()
-
-
-
-

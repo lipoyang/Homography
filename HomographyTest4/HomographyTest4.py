@@ -307,18 +307,31 @@ def loadImage(image_path):
     try:
         # 元画像を開く
         src_img = Image.open(image_path)
-        SrcW, SrcH = src_img.size # 画像のサイズ
+        _SrcW, _SrcH = src_img.size # 画像のサイズ
 
         # 画像サイズチェック
-        if SrcW > WinW or SrcH > WinH:
+        if _SrcW > WinW or _SrcH > WinH:
             tk.messagebox.showerror("エラー", "画像が大きすぎます (800x600まで)")
             return
-        x0 = int((WinW - SrcW) / 2)
-        y0 = int((WinH - SrcH) / 2)
 
         # 画像のピクセルデータ取得
         src_data = np.asarray(src_img)
-        print(f"{src_data.shape}")
+        h, w, bpp = src_data.shape
+        if w != _SrcW or h != _SrcH:
+            print(f"w, h = {w}, {h} / _SrcW, _SrcH = {_SrcW}, {_SrcH}")
+            tk.messagebox.showerror("エラー", "予期しない画像形式でファイルが読み込めません")
+            return
+        if bpp < 3 or bpp > 4:
+            print(f"bpp = {bpp}")
+            tk.messagebox.showerror("エラー", "予期しないピクセルフォーマットでファイルが読み込めません")
+            return
+        elif bpp == 4:
+            tk.messagebox.showwarning("警告", "入力画像のアルファチャンネルは非対応です")
+        
+        SrcW = _SrcW
+        SrcH = _SrcH
+        x0 = int((WinW - SrcW) / 2)
+        y0 = int((WinH - SrcH) / 2)
 
         # 四隅の座標の初期値
         p_ = np.array([[x0, y0], [x0+SrcW-1, y0], [x0+SrcW-1, y0+SrcH-1], [x0, y0+SrcH-1]], dtype=np.float64)
@@ -327,7 +340,7 @@ def loadImage(image_path):
         draw(True)
         hasImageLoaded = True
     except PIL.UnidentifiedImageError:
-        tk.messagebox.showerror("エラー", "画像が不正です")
+        tk.messagebox.showerror("エラー", "画像ファイルが不正です")
 
 # 画像保存
 def saveImage(image_path):

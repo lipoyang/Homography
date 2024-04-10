@@ -100,7 +100,3 @@ def start_up():
 
 if __name__ == '__main__':
     Homography_support.main()
-
-
-
-
