@@ -44,7 +44,7 @@ def calcH(x0_, y0_, x1_, y1_, x2_, y2_, x3_, y3_):
 
 #  ホモグラフィ変換の画像描画
 @jit(nopython=True, cache=True)
-def drawHomography(p_, src_data, dst_data, fine):
+def drawHomography(p_, SrcW, SrcH, src_data, dst_data, fine):
 
     # ホモグラフィ行列
     H_ = calcH(p_[0, 0], p_[0, 1], p_[1, 0], p_[1, 1], p_[2, 0], p_[2, 1], p_[3, 0], p_[3, 1])
@@ -76,7 +76,7 @@ def drawHomography(p_, src_data, dst_data, fine):
             if 0 <= xf and xc < SrcW and 0 <= yf and yc < SrcH:
                 if fine:
                     # 線形補間で色を取得
-                    dst_data[y_, x_] = interpolation(x, y, src_data)
+                    dst_data[y_, x_] = interpolation(x, y, SrcW, SrcH, src_data)
                 else:
                     # 荒く高速描画
                     X = int(x)
@@ -100,7 +100,7 @@ def drawHomography(p_, src_data, dst_data, fine):
 
 # 線形補間
 @jit(nopython=True, cache=True)
-def interpolation(x, y, src_data):
+def interpolation(x, y, SrcW, SrcH, src_data):
     R = np.zeros((2, 2), dtype=float)
     G = np.zeros((2, 2), dtype=float)
     B = np.zeros((2, 2), dtype=float)
@@ -193,7 +193,7 @@ def draw(fine):
     
     # ホモグラフィ画像の描画
     dst_data = np.zeros((WinH, WinW, 4), dtype=np.uint8)
-    drawHomography(p_, src_data, dst_data, fine)
+    drawHomography(p_, SrcW, SrcH, src_data, dst_data, fine)
 
     dst_img = Image.fromarray(dst_data, 'RGBA')
     img_tk = ImageTk.PhotoImage(dst_img)
