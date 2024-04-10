@@ -316,17 +316,26 @@ def loadImage(image_path):
 
         # 画像のピクセルデータ取得
         src_data = np.asarray(src_img)
+        shape_len = len(src_data.shape)
+        if shape_len == 2:
+            tk.messagebox.showerror("エラー", "モノクロ画像は非対応です。RGB画像を使用してください")
+            return
+        elif shape_len != 3:
+            print(f"shape_len = {shape_len}")
+            tk.messagebox.showerror("エラー", "予期しないピクセルフォーマットでファイルが読み込めません")
+            return
         h, w, bpp = src_data.shape
         if w != _SrcW or h != _SrcH:
             print(f"w, h = {w}, {h} / _SrcW, _SrcH = {_SrcW}, {_SrcH}")
             tk.messagebox.showerror("エラー", "予期しない画像形式でファイルが読み込めません")
             return
-        if bpp < 3 or bpp > 4:
+        elif bpp < 3 or bpp > 4:
             print(f"bpp = {bpp}")
             tk.messagebox.showerror("エラー", "予期しないピクセルフォーマットでファイルが読み込めません")
             return
         elif bpp == 4:
             tk.messagebox.showwarning("警告", "入力画像のアルファチャンネルは非対応です")
+            # ただし、アルファチャンネルを無視して利用可能
         
         SrcW = _SrcW
         SrcH = _SrcH
